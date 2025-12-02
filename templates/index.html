@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image Blending Tool</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background: linear-gradient(to bottom, #eff6fe, #effcf4);
+    }
+    .dropzone {
+      background: linear-gradient(135deg, #eff6fe, #effcf4);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center">
+
+  <div class="container max-w-4xl mx-auto py-10 px-6 bg-white rounded-2xl shadow-2xl">
+   
+    <h1 class="text-3xl font-bold text-center mb-2 text-blue-600">🎨 Image Blending Tool ✨</h1>
+    <p class="text-center text-gray-600 mb-6">
+      Upload two images and use blending to create stunning visual combinations.<br>
+      Adjust the blend ratio and export the result.
+    </p>
+    <div class="flex justify-center mb-8">
+      <button id="demoBtn" class="bg-white border rounded-lg px-4 py-2 shadow hover:bg-gray-100 flex items-center gap-2">
+  <i data-lucide="upload" class="w-5 h-5 text-blue-600"></i>
+  Load Demo Images
+</button>
+
+    </div>
+
+    <!-- downloads -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <!-- Left -->
+      <div id="leftDrop" class="dropzone border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer relative">
+        <input id="leftFile" type="file" accept="image/*" class="hidden"/>
+        <div id="leftPlaceholder">
+        <i data-lucide="upload" class="w-12 h-12 text-blue-500 mb-3 mx-auto"></i>
+
+          <p class="font-medium mb-3">Click to select an image or drag and drop</p>
+          <label for="leftFile" class="cursor-pointer bg-blue-500 text-white px-3 py-1 mt-3 rounded hover:bg-blue-600">Select File</label>
+        </div>
+        <div id="leftPreview" class="hidden flex-col items-center">
+          <img id="leftImg" class="max-h-48 rounded shadow mb-3"/>
+          <div class="flex gap-2 justify-center">
+            <label for="leftFile" class="bg-white text-gray-700 px-3 py-1 rounded shadow hover:bg-gray-200 cursor-pointer">Change</label>
+            <button id="leftRemove" class="bg-white text-gray-700 px-3 py-1 rounded shadow hover:bg-gray-200">Remove</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right -->
+      <div id="rightDrop" class="dropzone border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer relative">
+        <input id="rightFile" type="file" accept="image/*" class="hidden"/>
+        <div id="rightPlaceholder">
+        <i data-lucide="upload" class="w-12 h-12 text-blue-500 mb-3 mx-auto"></i>
+          <p class="font-medium mb-3">Click to select an image or drag and drop</p>
+          <label for="rightFile" class="cursor-pointer bg-blue-500 text-white px-3 py-1 mt-3 rounded hover:bg-blue-600">Select File</label>
+        </div>
+        <div id="rightPreview" class="hidden flex-col items-center">
+          <img id="rightImg" class="max-h-48 rounded shadow mb-3"/>
+          <div class="flex gap-2 justify-center">
+            <label for="rightFile" class="bg-white text-gray-700 px-3 py-1 rounded shadow hover:bg-gray-200 cursor-pointer">Change</label>
+            <button id="rightRemove" class="bg-white text-gray-700 px-3 py-1 rounded shadow hover:bg-gray-200">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BlendControl -->
+    <div class="bg-gray-50 p-6 rounded-lg shadow mb-8">
+      <h2 class="text-lg font-semibold mb-2 text-center">Blend Control</h2>
+      <p class="text-sm text-gray-500 text-center mb-4">Adjust the blend ratio between images</p>
+
+      <div class="flex justify-between text-sm mb-2">
+        <span id="leftPct" class="text-blue-600 font-semibold">Left Image: 50%</span>
+        <span id="rightPct" class="text-green-600 font-semibold">Right Image: 50%</span>
+      </div>
+
+      <input id="alphaRange" type="range" min="0" max="100" value="50" class="w-full" disabled/>
+
+      <div class="flex justify-between text-xs text-gray-500 mt-2">
+        <span>100% Left</span>
+        <span>50 / 50</span>
+        <span>100% Right</span>
+      </div>
+
+      <div class="flex justify-center mt-4">
+        <button id="mergeBtn" class="bg-gradient-to-r from-blue-400 to-green-400 text-white px-6 py-2 rounded-lg shadow hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+          Blend Images
+        </button>
+      </div>
+
+      <!-- StatusBar -->
+      <div id="statusBar" class="hidden mt-4">
+        <div class="w-full bg-gray-200 rounded-full h-3">
+          <div id="statusFill" class="bg-blue-500 h-3 rounded-full w-0 transition-all"></div>
+        </div>
+        <p id="statusText" class="text-center text-sm text-gray-500 mt-2">Processing...</p>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="bg-gray-50 p-6 rounded-lg shadow mb-8 text-center">
+      <h2 class="text-lg font-semibold mb-2">Preview</h2>
+      <p class="text-gray-400 mb-2">Upload two images and adjust the blend</p>
+      <div id="resultPreview" class="border-2 border-dashed rounded-lg h-64 flex items-center justify-center text-gray-400">
+        Blended image will appear here
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="bg-gray-50 p-6 rounded-lg shadow text-center">
+      <h2 class="text-lg font-semibold mb-4">Export Result</h2>
+      <div class="flex justify-center gap-4">
+  <a id="dl_png" href="#" class="px-4 py-2 rounded-lg text-white pointer-events-none opacity-50 flex items-center gap-2" style="background-color:#155dfc">
+    <i data-lucide="download" class="w-5 h-5"></i> Save as PNG
+  </a>
+  <a id="dl_jpg" href="#" class="px-4 py-2 rounded-lg text-white pointer-events-none opacity-50 flex items-center gap-2" style="background-color:#00a63e">
+    <i data-lucide="download" class="w-5 h-5"></i> Save as JPG
+  </a>
+  <a id="dl_bmp" href="#" class="px-4 py-2 rounded-lg text-white pointer-events-none opacity-50 flex items-center gap-2" style="background-color:#9810fa">
+    <i data-lucide="download" class="w-5 h-5"></i> Save as BMP
+  </a>
+</div>
+
+    </div>
+  </div>
+
+<script>
+const demoBtn = document.getElementById("demoBtn");
+const leftFile = document.getElementById("leftFile");
+const rightFile = document.getElementById("rightFile");
+const leftPreview = document.getElementById("leftPreview");
+const rightPreview = document.getElementById("rightPreview");
+const leftPlaceholder = document.getElementById("leftPlaceholder");
+const rightPlaceholder = document.getElementById("rightPlaceholder");
+const leftImg = document.getElementById("leftImg");
+const rightImg = document.getElementById("rightImg");
+const leftRemove = document.getElementById("leftRemove");
+const rightRemove = document.getElementById("rightRemove");
+const statusBar = document.getElementById("statusBar");
+const statusFill = document.getElementById("statusFill");
+const statusText = document.getElementById("statusText");
+const alphaRange = document.getElementById("alphaRange");
+const mergeBtn = document.getElementById("mergeBtn");
+const resultPreview = document.getElementById("resultPreview");
+const dl_png = document.getElementById("dl_png");
+const dl_jpg = document.getElementById("dl_jpg");
+const dl_bmp = document.getElementById("dl_bmp");
+
+function updateDemoBtn() {
+  if (leftFile.files.length > 0 || rightFile.files.length > 0) {
+    demoBtn.style.display = "none";
+  } else {
+    demoBtn.style.display = "block";
+  }
+}
+
+function checkReady() {
+  if (leftFile.files.length > 0 && rightFile.files.length > 0) {
+    mergeBtn.disabled = false;
+    alphaRange.disabled = false;
+  } else {
+    mergeBtn.disabled = true;
+    alphaRange.disabled = true;
+  }
+}
+
+function handleFile(input, img, preview, placeholder) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      img.src = e.target.result;
+      preview.classList.remove("hidden");
+      placeholder.classList.add("hidden");
+      updateDemoBtn();
+      checkReady();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+leftFile.addEventListener("change", () => handleFile(leftFile, leftImg, leftPreview, leftPlaceholder));
+rightFile.addEventListener("change", () => handleFile(rightFile, rightImg, rightPreview, rightPlaceholder));
+
+leftRemove.addEventListener("click", () => {
+  leftFile.value = "";
+  leftPreview.classList.add("hidden");
+  leftPlaceholder.classList.remove("hidden");
+  updateDemoBtn();
+  checkReady();
+});
+rightRemove.addEventListener("click", () => {
+  rightFile.value = "";
+  rightPreview.classList.add("hidden");
+  rightPlaceholder.classList.remove("hidden");
+  updateDemoBtn();
+  checkReady();
+});
+
+function setupDrop(dropEl, input, img, preview, placeholder) {
+  dropEl.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropEl.classList.add("ring-2","ring-blue-300");
+  });
+  dropEl.addEventListener("dragleave", () => {
+    dropEl.classList.remove("ring-2","ring-blue-300");
+  });
+  dropEl.addEventListener("drop", e => {
+    e.preventDefault();
+    dropEl.classList.remove("ring-2","ring-blue-300");
+    input.files = e.dataTransfer.files;
+    handleFile(input, img, preview, placeholder);
+  });
+}
+setupDrop(document.getElementById("leftDrop"), leftFile, leftImg, leftPreview, leftPlaceholder);
+setupDrop(document.getElementById("rightDrop"), rightFile, rightImg, rightPreview, rightPlaceholder);
+
+const leftPct = document.getElementById("leftPct");
+const rightPct = document.getElementById("rightPct");
+alphaRange.addEventListener("input", () => {
+  leftPct.textContent = `Left Image: ${alphaRange.value}%`;
+  rightPct.textContent = `Right Image: ${100 - alphaRange.value}%`;
+});
+
+async function urlToFile(url, filename) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type });
+}
+
+demoBtn.addEventListener("click", async () => {
+  try {
+    const res = await fetch("/demo");
+    const data = await res.json();
+
+    const leftDemoFile = await urlToFile(data.left_url, "demo1.png");
+    const rightDemoFile = await urlToFile(data.right_url, "demo2.png");
+
+    const dtLeft = new DataTransfer();
+    dtLeft.items.add(leftDemoFile);
+    leftFile.files = dtLeft.files;
+
+    const dtRight = new DataTransfer();
+    dtRight.items.add(rightDemoFile);
+    rightFile.files = dtRight.files;
+
+    handleFile(leftFile, leftImg, leftPreview, leftPlaceholder);
+    handleFile(rightFile, rightImg, rightPreview, rightPlaceholder);
+
+    mergeBtn.disabled = false;
+    alphaRange.disabled = false;
+    updateDemoBtn();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to load demo images");
+  }
+});
+
+mergeBtn.addEventListener("click", () => {
+  if (!leftFile.files[0] || !rightFile.files[0]) {
+    alert("Please upload both images!");
+    return;
+  }
+
+  const form = new FormData();
+  form.append("leftFile", leftFile.files[0]);
+  form.append("rightFile", rightFile.files[0]);
+  form.append("leftPct", alphaRange.value);
+
+  statusBar.classList.remove("hidden");
+  statusFill.style.width = "0%";
+  statusText.textContent = "Uploading...";
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "/merge", true);
+
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      let percent = Math.round((e.loaded / e.total) * 100);
+      statusFill.style.width = percent + "%";
+      statusText.textContent = "Uploading... " + percent + "%";
+    }
+  };
+
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      statusFill.style.width = "100%";
+      statusText.textContent = "Processing complete!";
+      const data = JSON.parse(xhr.responseText);
+
+      resultPreview.innerHTML = "";
+      const img = document.createElement("img");
+      img.src = data.preview_url;
+      img.classList.add("max-h-64","rounded-lg","shadow","mx-auto");
+      resultPreview.appendChild(img);
+
+      dl_png.href = data.png_url;
+      dl_png.classList.remove("opacity-50","pointer-events-none");
+
+      dl_jpg.href = data.jpg_url;
+      dl_jpg.classList.remove("opacity-50","pointer-events-none");
+
+      dl_bmp.href = data.bmp_url;
+      dl_bmp.classList.remove("opacity-50","pointer-events-none");
+    } else {
+      statusText.textContent = "Error during processing!";
+    }
+  };
+
+  xhr.onerror = () => {
+    statusText.textContent = "Connection error!";
+  };
+
+  xhr.send(form);
+});
+
+async function saveFile(url, suggestedName, mimeType) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: suggestedName,
+        types: [{ description: mimeType, accept: { [mimeType]: [".png", ".jpg", ".bmp"] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = suggestedName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+dl_png.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (!dl_png.classList.contains("pointer-events-none")) {
+    saveFile(dl_png.href, "result.png", "image/png");
+  }
+});
+dl_jpg.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (!dl_jpg.classList.contains("pointer-events-none")) {
+    saveFile(dl_jpg.href, "result.jpg", "image/jpeg");
+  }
+});
+dl_bmp.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (!dl_bmp.classList.contains("pointer-events-none")) {
+    saveFile(dl_bmp.href, "result.bmp", "image/bmp");
+  }
+});
+
+lucide.createIcons();
+</script>
+
+</body>
+</html>
